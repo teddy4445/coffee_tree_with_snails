@@ -2,5 +2,5 @@ pandas
 numpy
 matplotlib
 seaborn
-scikit-learn
-scipy==1.9.3
+scipy
+oct2py==5.5.1
