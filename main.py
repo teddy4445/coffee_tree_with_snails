@@ -2,6 +2,7 @@
 import os
 import time
 import oct2py
+import numpy as np
 import pandas as pd
 
 # project imports
@@ -9,7 +10,6 @@ import pandas as pd
 # initialize for the system
 from plotter import Plotter
 from mat_file_loader import MatFileLoader
-
 
 oct2py.octave.addpath(os.path.dirname(__file__))
 
@@ -20,6 +20,8 @@ class Main:
     """
 
     # CONSTS #
+    RESULTS_FOLDER = "results"
+    METRIC_SCORES = [0.34, 0.33, 0.33]
     OCTAVE_BASED_SCRIPT_NAME = "model_solver.txt"
     OCTAVE_RUN_SCRIPT_NAME = "model_solver.m"
     OCTAVE_RUN_RESULT_NAME = "model_answer.mat"
@@ -38,7 +40,7 @@ class Main:
         # make sure the IO is file
         Main.io()
         # baseline graphs
-        Main.first_plot()
+        # Main.first_plot()
         # one-dim sensitivity graphs
         Main.second_graph()
         # heatmap sensitivity graphs
@@ -48,8 +50,7 @@ class Main:
 
     @staticmethod
     def io() -> None:
-        # TODO: add later if needed or remove
-        for name in []:
+        for name in [Main.RESULTS_FOLDER]:
             try:
                 os.mkdir(os.path.join(os.path.dirname(__file__), name))
             except:
@@ -57,8 +58,12 @@ class Main:
 
     @staticmethod
     def desire_metric(df: dict) -> tuple:
-        # TODO: add later, return mean & std
-        pass
+        """
+        Teddy: I decide we want as many healthy trees with as little number of infected trees and snails
+        """
+        m = np.asarray(df["y"])
+        score = Main.METRIC_SCORES[0] * m[:, 0] - Main.METRIC_SCORES[1] * m[:, 1] - Main.METRIC_SCORES[2] * m[:, 2]
+        return np.mean(score), np.std(score)
 
     @staticmethod
     def first_plot() -> None:
@@ -67,19 +72,27 @@ class Main:
             [100, 5, 100],
             [0, 100, 5],
             [97, 3, 50],
-            [25, 25, 25],
+            [25, 25, 25]
         ]
-
         for index, initial_condition in enumerate(initial_conditions):
+            print("Main.first_plot: baseline for initial condition: {} (#{}/{}-{:.2f}%)".format(initial_condition,
+                                                                                                index + 1,
+                                                                                                len(initial_conditions),
+                                                                                                (index + 1) * 100 / len(
+                                                                                                    initial_conditions)))
             Plotter.baseline(model_matrix=Main.solve_the_model(initial_condition=initial_condition),
-                             save_path="baseline_{}.pdf".format(index))
+                             save_path=os.path.join(Main.RESULTS_FOLDER, "baseline_{}.pdf".format(index)))
 
     @staticmethod
     def second_graph() -> None:
         ans_mean = []
         ans_std = []
-        x = [0.05 * i for i in range(8)]
-        for parm_val in x:
+        x = [0.05 * i for i in range(5)]
+        for index, parm_val in enumerate(x):
+            print("Main.second_graph: sens for a={} (#{}/{}-{:.2f}%)".format(parm_val,
+                                                                             index + 1,
+                                                                             len(x),
+                                                                             (index + 1) * 100 / len(x)))
             mean, std = Main.desire_metric(df=Main.solve_the_model(a=parm_val))
             ans_mean.append(mean)
             ans_std.append(std)
@@ -88,7 +101,7 @@ class Main:
                             y_err=ans_std,
                             x_label="a",
                             y_label="add-later",
-                            save_path="sensitivity_{}.pdf".format("a"))
+                            save_path=os.path.join(Main.RESULTS_FOLDER, "sensitivity_{}.pdf".format("a")))
 
         # TODO: repeat the above code for beta, k, gamma, b, d
 
@@ -110,7 +123,7 @@ class Main:
         Plotter.heatmap(df=df,
                         x_label="a",
                         y_label="$\gamma$",
-                        save_path="heatmap_{}_{}.pdf".format("a", "gamma"))
+                        save_path=os.path.join(Main.RESULTS_FOLDER, "heatmap_{}_{}.pdf".format("a", "gamma")))
 
         # TODO: repeat the above code for beta cross k and b cross d
 
@@ -126,11 +139,11 @@ class Main:
                         beta: float = 0.085,
                         k: float = 0.05,
                         gamma: float = 0.05,
-                        b: float = 0.025,
-                        d: float = 0.15):
+                        b: float = 0.005,
+                        d: float = 0.10):
         # fix default params
         if tspan is None:
-            tspan = [0, 25]
+            tspan = [0, 100]
         if initial_condition is None:
             initial_condition = [100 - 3, 3, 50]
 
