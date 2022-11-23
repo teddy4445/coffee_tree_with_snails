@@ -54,6 +54,7 @@ class Plotter:
                  color="black")
         ax.yaxis.set_ticks_position('left')
         ax.xaxis.set_ticks_position('bottom')
+        plt.tight_layout()
         plt.savefig(save_path, dpi=600)
         plt.close()
 
@@ -83,6 +84,7 @@ class Plotter:
         ax.xaxis.set_ticks_position('bottom')
         plt.grid(alpha=0.25,
                  color="black")
+        plt.tight_layout()
         plt.savefig(save_path, dpi=600)
         plt.close()
 
@@ -99,6 +101,7 @@ class Plotter:
         plt.xlabel(x_label, fontsize=14)
         plt.ylabel(y_label, fontsize=14)
         plt.savefig(save_path, dpi=600)
+        plt.tight_layout()
         plt.close()
 
         sns.heatmap(df,
@@ -108,6 +111,7 @@ class Plotter:
         plt.xlabel(x_label, fontsize=14)
         plt.ylabel(y_label, fontsize=14)
         plt.savefig(save_path.replace(".pdf", "_zoom.pdf"), dpi=600)
+        plt.tight_layout()
         plt.close()
 
     @staticmethod
@@ -122,6 +126,7 @@ class Plotter:
                        target_name="Class",
                        feature_names=feature_names,
                        scale=2)
+        plt.tight_layout()
         plt.savefig(save_path,
                     dpi=600)
         plt.close()

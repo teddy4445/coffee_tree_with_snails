@@ -25,7 +25,7 @@ class Main:
 
     # CONSTS #
     RESULTS_FOLDER = "results"
-    METRIC_SCORES = [0.34, 0.33, 0.33]
+
     OCTAVE_BASED_SCRIPT_NAME = "model_solver.txt"
     OCTAVE_RUN_SCRIPT_NAME = "model_solver.m"
     OCTAVE_RUN_RESULT_NAME = "model_answer.mat"
@@ -45,7 +45,7 @@ class Main:
         # make sure the IO is file
         Main.io()
         # baseline graphs
-        # Main.first_plot()
+        Main.first_plot()
         # one-dim sensitivity graphs
         Main.second_graph()
         # heatmap sensitivity graphs
@@ -212,7 +212,7 @@ class Main:
                 xi = xi_1 - fi / dfds  # Newton-Raphson equation
                 xi_1 = xi
             x.append([ts, ti])
-            y.append(xi_1)
+            y.append(round(xi_1))
 
         # organize the results
         x = pd.DataFrame(data=x,
@@ -277,7 +277,7 @@ class Main:
     @staticmethod
     def solve_the_model(tspan: list = None,
                         initial_condition: list = None,
-                        a: float = 0.025,
+                        a: float = 0.01,
                         beta: float = 0.085,
                         k: float = 0.05,
                         gamma: float = 0.05,
