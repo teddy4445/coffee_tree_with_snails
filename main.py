@@ -1,15 +1,19 @@
 # library imports
-import os
 import time
+import pickle
 import oct2py
-import numpy as np
-import pandas as pd
+import random
+from dtreeviz.trees import *
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 
 # project imports
-
-# initialize for the system
 from plotter import Plotter
 from mat_file_loader import MatFileLoader
+
+# initialize for the system
 
 oct2py.octave.addpath(os.path.dirname(__file__))
 
@@ -26,6 +30,7 @@ class Main:
     OCTAVE_RUN_SCRIPT_NAME = "model_solver.m"
     OCTAVE_RUN_RESULT_NAME = "model_answer.mat"
 
+    RANDOM_STATE = 73  # Sheldon's number
     # END - CONSTS #
 
     def __init__(self):
@@ -59,10 +64,10 @@ class Main:
     @staticmethod
     def desire_metric(df: dict) -> tuple:
         """
-        Teddy: I decide we want as many healthy trees with as little number of infected trees and snails
+        An approximation to the basic reproduction number
         """
         m = np.asarray(df["y"])
-        score = Main.METRIC_SCORES[0] * m[:, 0] - Main.METRIC_SCORES[1] * m[:, 1] - Main.METRIC_SCORES[2] * m[:, 2]
+        score = [(m[index, 1] - m[index - 1, 1]) / m[index - 1, 1] for index in range(1, len(m[:, 1]))]
         return np.mean(score), np.std(score)
 
     @staticmethod
@@ -85,52 +90,189 @@ class Main:
 
     @staticmethod
     def second_graph() -> None:
+        """
+        Generate all the parameter sensitivity graphs
+        """
+        Main.sens(parameter_range=[i * 0.025 for i in range(5)], parameter_name="a")
+
+        Main.sens(parameter_range=[i * 0.025 for i in range(5)], parameter_name="beta")
+
+        Main.sens(parameter_range=[i * 0.025 for i in range(5)], parameter_name="k")
+
+        Main.sens(parameter_range=[i * 0.025 for i in range(5)], parameter_name="gamma")
+
+        Main.sens(parameter_range=[i * 0.025 for i in range(5)], parameter_name="b")
+
+        Main.sens(parameter_range=[i * 0.025 for i in range(5)], parameter_name="d")
+
+    @staticmethod
+    def sens(parameter_range: list,
+             parameter_name: str) -> None:
+        """
+        This function generates a one-dim sensitivity analysis
+        """
         ans_mean = []
         ans_std = []
-        x = [0.05 * i for i in range(5)]
-        for index, parm_val in enumerate(x):
-            print("Main.second_graph: sens for a={} (#{}/{}-{:.2f}%)".format(parm_val,
-                                                                             index + 1,
-                                                                             len(x),
-                                                                             (index + 1) * 100 / len(x)))
-            mean, std = Main.desire_metric(df=Main.solve_the_model(a=parm_val))
+        for index, parm_val in enumerate(parameter_range):
+            print("Main.second_graph: sens for {}={} (#{}/{}-{:.2f}%)".format(parameter_name,
+                                                                              parm_val,
+                                                                              index + 1,
+                                                                              len(parameter_range),
+                                                                              (index + 1) * 100 / len(parameter_range)))
+            mean, std = Main.desire_metric(df=Main.solve_the_model_wrapper(params={parameter_name: parm_val}))
             ans_mean.append(mean)
             ans_std.append(std)
-        Plotter.sensitivity(x=x,
+        Plotter.sensitivity(x=parameter_range,
                             y=ans_mean,
                             y_err=ans_std,
-                            x_label="a",
-                            y_label="add-later",
-                            save_path=os.path.join(Main.RESULTS_FOLDER, "sensitivity_{}.pdf".format("a")))
-
-        # TODO: repeat the above code for beta, k, gamma, b, d
+                            x_label=parameter_name,
+                            y_label="Average basic reproduction number",
+                            save_path=os.path.join(Main.RESULTS_FOLDER, "sensitivity_{}.pdf".format(parameter_name)))
 
     @staticmethod
     def third_graph() -> None:
-        x = [0.05 * i for i in range(8)]  # TODO: replace with better range
-        y = [0.05 * i for i in range(8)]  # TODO: replace with better range
+        """
+        This function responsible to run all the needed heatmap analysis needed for the paper
+        """
+        Main.heatmap(x=[i * 0.025 for i in range(4)],
+                     y=[i * 0.025 for i in range(4)],
+                     x_parameter_name="a",
+                     y_parameter_name="gamma")
+
+        Main.heatmap(x=[i * 0.025 for i in range(4)],
+                     y=[i * 0.025 for i in range(4)],
+                     x_parameter_name="beta",
+                     y_parameter_name="k")
+
+        Main.heatmap(x=[i * 0.025 for i in range(4)],
+                     y=[i * 0.025 for i in range(4)],
+                     x_parameter_name="b",
+                     y_parameter_name="d")
+
+    @staticmethod
+    def heatmap(x: list,
+                y: list,
+                x_parameter_name: str,
+                y_parameter_name: str) -> None:
+        """
+        This function is responsible to get two parameters and return the heatmap of them
+        """
         answer = []
-        for x_parm_val in x:
+        for i_index, x_parm_val in enumerate(x):
             row = []
-            for y_parm_val in y:
-                mean, std = Main.desire_metric(df=Main.solve_the_model(a=x_parm_val,
-                                                                       gamma=y_parm_val))
+            for j_index, y_parm_val in enumerate(y):
+                print("Main.third_graph: sens for {}={} X {}={} (#{}/{}-{:.2f}%)".format(x_parameter_name,
+                                                                                         x_parm_val,
+                                                                                         y_parameter_name,
+                                                                                         y_parm_val,
+                                                                                         i_index * len(
+                                                                                             x) + j_index + 1,
+                                                                                         len(x) * len(y),
+                                                                                         100 * (i_index * len(
+                                                                                             x) + j_index + 1) / (
+                                                                                                 len(x) * len(
+                                                                                             y))))
+                mean, std = Main.desire_metric(df=Main.solve_the_model_wrapper(params={
+                    x_parameter_name: x_parm_val,
+                    y_parameter_name: y_parm_val
+                }))
                 row.append(mean)
             answer.append(row)
         df = pd.DataFrame(data=answer,
-                          columns=x,
-                          index=y)
+                          columns=[round(val, 2) for val in x],
+                          index=[round(val, 2) for val in y])
         Plotter.heatmap(df=df,
-                        x_label="a",
-                        y_label="$\gamma$",
-                        save_path=os.path.join(Main.RESULTS_FOLDER, "heatmap_{}_{}.pdf".format("a", "gamma")))
-
-        # TODO: repeat the above code for beta cross k and b cross d
+                        x_label=x_parameter_name,
+                        y_label=y_parameter_name,
+                        save_path=os.path.join(Main.RESULTS_FOLDER, "heatmap_{}_{}.pdf".format(x_parameter_name,
+                                                                                               y_parameter_name)))
 
     @staticmethod
     def fourth_graph() -> None:
-        # TODO: think about it later
-        pass
+        """
+        This function finds an explainable machine learning model to explain the size of snails based on initial conditions
+        """
+        # TODO: think about a larger model that takes the params values as well
+        # Optimization process hyper-parameter #
+        MAX_ITER = 10
+        X_DELTA = 1
+
+        # generate the dataset
+        x = []
+        y = []
+        for i in range(1000):
+            ts = random.randint(0, 100)
+            ti = random.randint(0, 100)
+            # find best 's' in range
+            xi_1 = ti/2
+            # Iterating until either the tolerance or max iterations is met
+            for opt_index in range(MAX_ITER):
+                fi = Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1]))[0]
+                dfds = (Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 + X_DELTA]))[0] - Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 - X_DELTA]))[0]) / 2*X_DELTA
+                xi = xi_1 - fi / dfds  # Newton-Raphson equation
+                xi_1 = xi
+            x.append([ts, ti])
+            y.append(xi_1)
+
+        # organize the results
+        x = pd.DataFrame(data=x,
+                         columns=["T_s", "T_i"])
+        y = pd.DataFrame(data=y,
+                         columns=["S"])
+
+        # save data for later usage
+        over_all_df = x.copy()
+        over_all_df["S"] = y
+        over_all_df.to_csv(os.path.join(os.path.dirname(__file__), Main.RESULTS_FOLDER, "model_train_data.csv"))
+
+        # split to train and test
+        x_train, y_train, x_test, y_test = train_test_split(x,
+                                                            y,
+                                                            test_size=0.2,
+                                                            random_state=Main.RANDOM_STATE)
+        # find a good model
+        model_picker = GridSearchCV(estimator=DecisionTreeClassifier(splitter="best"),
+                                    param_grid={
+                                        "criterion": ["gini", "entropy"],
+                                        "max_depth": [3, 4, 5, 6, 7],
+                                        "ccp_alpha": [0, 0.01, 0.025],
+                                        "random_state": [Main.RANDOM_STATE]
+                                    })
+        model_picker.fit(x_train, y_train)
+        clf = model_picker.best_estimator_
+
+        # test model
+        print("Main.fourth_graph, model train's mae: {:.3f}%".format(mean_absolute_error(clf.predict(x_train), y_train)))
+        print("Main.fourth_graph, model test's mae: {:.3f}%".format(mean_absolute_error(clf.predict(x_test), y_test)))
+
+        # plot tree
+        Plotter.dt(clf=clf,
+                   x=x,
+                   y=y,
+                   feature_names=list(x),
+                   save_path=os.path.join(Main.RESULTS_FOLDER, "fig_4.pdf"))
+
+        # save model to file for later if needed
+        with open(os.path.join(os.path.dirname(__file__), Main.RESULTS_FOLDER, "model"), "wb") as model_file:
+            pickle.dump(clf,
+                        model_file)
+
+    @staticmethod
+    def solve_the_model_wrapper(params: dict = None,
+                                tspan: list = None,
+                                initial_condition: list = None):
+        """
+        A function responsible to let set the model's parameter values by name
+        """
+        params = {} if params is None else params
+        return Main.solve_the_model(tspan=tspan,
+                                    initial_condition=initial_condition,
+                                    a=0.025 if "a" not in params else params["a"],
+                                    beta=0.085 if "beta" not in params else params["beta"],
+                                    k=0.05 if "k" not in params else params["k"],
+                                    gamma=0.05 if "gamma" not in params else params["gamma"],
+                                    d=0.005 if "d" not in params else params["d"],
+                                    b=0.10 if "b" not in params else params["b"])
 
     @staticmethod
     def solve_the_model(tspan: list = None,
@@ -145,7 +287,7 @@ class Main:
         if tspan is None:
             tspan = [0, 100]
         if initial_condition is None:
-            initial_condition = [100 - 3, 3, 50]
+            initial_condition = [100 - 3, 3, 10]
 
         # make sure the inputs are legit
         if not isinstance(tspan, list) or len(tspan) != 2 or tspan[1] <= tspan[0]:

@@ -3,7 +3,9 @@ import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from dtreeviz.trees import *
 import matplotlib.pyplot as plt
+
 
 # project imports
 
@@ -72,8 +74,15 @@ class Plotter:
                      fmt="-o")
         plt.xlabel(x_label, fontsize=14)
         plt.ylabel(y_label, fontsize=14)
+        plt.xticks(x, fontsize=12)
+        top_error_point = max(np.asarray(y) + np.asarray(y_err)) * 1.05
+        bottom_error_point = min(np.asarray(y) - np.asarray(y_err)) * 1.05
+        plt.yticks([bottom_error_point + 0.1 * i * (abs(top_error_point) + abs(bottom_error_point)) for i in range(11)],
+                   fontsize=12)
         ax.yaxis.set_ticks_position('left')
         ax.xaxis.set_ticks_position('bottom')
+        plt.grid(alpha=0.25,
+                 color="black")
         plt.savefig(save_path, dpi=600)
         plt.close()
 
@@ -82,7 +91,6 @@ class Plotter:
                 x_label: str,
                 y_label: str,
                 save_path: str):
-        # TODO: after picking the metric, rethink about the limitions - i.e., the vmin & vmax arguments
         sns.heatmap(df,
                     vmin=0,
                     vmax=1,
@@ -93,3 +101,27 @@ class Plotter:
         plt.savefig(save_path, dpi=600)
         plt.close()
 
+        sns.heatmap(df,
+                    vmin=0,
+                    annot=False,
+                    cmap="coolwarm")
+        plt.xlabel(x_label, fontsize=14)
+        plt.ylabel(y_label, fontsize=14)
+        plt.savefig(save_path.replace(".pdf", "_zoom.pdf"), dpi=600)
+        plt.close()
+
+    @staticmethod
+    def dt(clf,
+           x,
+           y,
+           feature_names: list,
+           save_path: str):
+        viz = dtreeviz(clf,
+                       x,
+                       y,
+                       target_name="Class",
+                       feature_names=feature_names,
+                       scale=2)
+        plt.savefig(save_path,
+                    dpi=600)
+        plt.close()
