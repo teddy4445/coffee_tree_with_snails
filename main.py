@@ -31,6 +31,7 @@ class Main:
     OCTAVE_RUN_RESULT_NAME = "model_answer.mat"
 
     RANDOM_STATE = 73  # Sheldon's number
+
     # END - CONSTS #
 
     def __init__(self):
@@ -45,11 +46,11 @@ class Main:
         # make sure the IO is file
         Main.io()
         # baseline graphs
-        Main.first_plot()
+        # Main.first_plot()
         # one-dim sensitivity graphs
-        Main.second_graph()
+        # Main.second_graph()
         # heatmap sensitivity graphs
-        Main.third_graph()
+        # Main.third_graph()
         # optimal sub-section graphs
         Main.fourth_graph()
 
@@ -134,6 +135,7 @@ class Main:
         """
         This function responsible to run all the needed heatmap analysis needed for the paper
         """
+
         Main.heatmap(x=[i * 0.025 for i in range(4)],
                      y=[i * 0.025 for i in range(4)],
                      x_parameter_name="a",
@@ -147,6 +149,11 @@ class Main:
         Main.heatmap(x=[i * 0.025 for i in range(4)],
                      y=[i * 0.025 for i in range(4)],
                      x_parameter_name="b",
+                     y_parameter_name="d")
+
+        Main.heatmap(x=[i * 0.025 for i in range(4)],
+                     y=[i * 0.025 for i in range(4)],
+                     x_parameter_name="a",
                      y_parameter_name="d")
 
     @staticmethod
@@ -200,16 +207,35 @@ class Main:
         # generate the dataset
         x = []
         y = []
-        for i in range(1000):
+        for i in range(5):
             ts = random.randint(0, 100)
             ti = random.randint(0, 100)
             # find best 's' in range
-            xi_1 = ti/2
+            xi_1 = round(ti / 2)
             # Iterating until either the tolerance or max iterations is met
+            xi_history = []
             for opt_index in range(MAX_ITER):
                 fi = Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1]))[0]
-                dfds = (Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 + X_DELTA]))[0] - Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 - X_DELTA]))[0]) / 2*X_DELTA
-                xi = xi_1 - fi / dfds  # Newton-Raphson equation
+                dfds = (Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 + X_DELTA]))[
+                            0] -
+                        Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 - X_DELTA]))[
+                            0]) / 2 * X_DELTA
+                xi = round(xi_1 - fi / dfds)  # Newton-Raphson equation
+                # edge case from biology
+                if xi < 0:
+                    xi = 0
+                print("IC = [ts={}, ti={}] ---> Iter #{}/{} - xi={:.3f}, xi_1={}, fi={}, dfds={}".format(ts,
+                                                                                                         ti,
+                                                                                                         opt_index + 1,
+                                                                                                         MAX_ITER,
+                                                                                                         xi,
+                                                                                                         xi_1,
+                                                                                                         fi,
+                                                                                                         dfds))
+                if abs(xi - xi_1) <= 2 * X_DELTA or xi in xi_history:
+                    xi_1 = xi
+                    break
+                xi_history.append(xi)
                 xi_1 = xi
             x.append([ts, ti])
             y.append(round(xi_1))
@@ -223,7 +249,15 @@ class Main:
         # save data for later usage
         over_all_df = x.copy()
         over_all_df["S"] = y
-        over_all_df.to_csv(os.path.join(os.path.dirname(__file__), Main.RESULTS_FOLDER, "model_train_data.csv"))
+        over_all_df.to_csv(os.path.join(os.path.dirname(__file__),
+                                        Main.RESULTS_FOLDER,
+                                        "model_train_data.csv"),
+                           index=False)
+
+        Plotter.snail_scatter(df=over_all_df,
+                              save_path=os.path.join(os.path.dirname(__file__),
+                                                     Main.RESULTS_FOLDER,
+                                                     "optimal.pdf"))
 
         # split to train and test
         x_train, y_train, x_test, y_test = train_test_split(x,
@@ -242,7 +276,8 @@ class Main:
         clf = model_picker.best_estimator_
 
         # test model
-        print("Main.fourth_graph, model train's mae: {:.3f}%".format(mean_absolute_error(clf.predict(x_train), y_train)))
+        print(
+            "Main.fourth_graph, model train's mae: {:.3f}%".format(mean_absolute_error(clf.predict(x_train), y_train)))
         print("Main.fourth_graph, model test's mae: {:.3f}%".format(mean_absolute_error(clf.predict(x_test), y_test)))
 
         # plot tree
@@ -285,7 +320,7 @@ class Main:
                         d: float = 0.10):
         # fix default params
         if tspan is None:
-            tspan = [0, 100]
+            tspan = [0, 20]
         if initial_condition is None:
             initial_condition = [100 - 3, 3, 10]
 

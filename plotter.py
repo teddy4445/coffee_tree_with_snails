@@ -115,6 +115,26 @@ class Plotter:
         plt.close()
 
     @staticmethod
+    def snail_scatter(df,
+                      save_path: str):
+        plt.scatter(df.iloc[:,0],
+                    df.iloc[:,1],
+                    c=df.iloc[:,2],
+                    marker="o",
+                    cmap="coolwarm")
+        plt.xlabel("$T_s$")
+        plt.ylabel("$T_i$")
+        plt.grid(alpha=0.25,
+                 color="black")
+        ax = plt.gca()
+        ax.yaxis.set_ticks_position('left')
+        ax.xaxis.set_ticks_position('bottom')
+        plt.tight_layout()
+        plt.savefig(save_path,
+                    dpi=600)
+        plt.close()
+
+    @staticmethod
     def dt(clf,
            x,
            y,
