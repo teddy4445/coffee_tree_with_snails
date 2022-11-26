@@ -59,11 +59,11 @@ class Main:
         # make sure the IO is file
         Main.io()
         # baseline graphs
-        # Main.first_plot()
+        Main.first_plot()
         # one-dim sensitivity graphs
-        # Main.second_graph()
+        Main.second_graph()
         # heatmap sensitivity graphs
-        # Main.third_graph()
+        Main.third_graph()
         # optimal sub-section graphs
         Main.fourth_graph(dataset_ready=True)
 
