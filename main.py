@@ -4,8 +4,8 @@ import pickle
 import oct2py
 import random
 from dtreeviz.trees import *
+from sklearn.metrics import accuracy_score
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 
@@ -14,8 +14,21 @@ from plotter import Plotter
 from mat_file_loader import MatFileLoader
 
 # initialize for the system
-
 oct2py.octave.addpath(os.path.dirname(__file__))
+
+
+# places classification
+def to_classes(row):
+    try:
+        if row["T_i"] + row["T_i"] == 0:
+            return 0
+        answer = int(round(row["S"] / (row["T_i"] + row["T_i"]), 1)*10)
+        if answer > 2:
+            return 2
+        else:
+            return answer
+    except:
+        return 0
 
 
 class Main:
@@ -52,7 +65,7 @@ class Main:
         # heatmap sensitivity graphs
         # Main.third_graph()
         # optimal sub-section graphs
-        Main.fourth_graph()
+        Main.fourth_graph(dataset_ready=True)
 
     @staticmethod
     def io() -> None:
@@ -195,64 +208,72 @@ class Main:
                                                                                                y_parameter_name)))
 
     @staticmethod
-    def fourth_graph() -> None:
+    def fourth_graph(dataset_ready: bool = False) -> None:
         """
         This function finds an explainable machine learning model to explain the size of snails based on initial conditions
         """
         # TODO: think about a larger model that takes the params values as well
-        # Optimization process hyper-parameter #
-        MAX_ITER = 10
-        X_DELTA = 1
 
-        # generate the dataset
-        x = []
-        y = []
-        for i in range(5):
-            ts = random.randint(0, 100)
-            ti = random.randint(0, 100)
-            # find best 's' in range
-            xi_1 = round(ti / 2)
-            # Iterating until either the tolerance or max iterations is met
-            xi_history = []
-            for opt_index in range(MAX_ITER):
-                fi = Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1]))[0]
-                dfds = (Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 + X_DELTA]))[
-                            0] -
-                        Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 - X_DELTA]))[
-                            0]) / 2 * X_DELTA
-                xi = round(xi_1 - fi / dfds)  # Newton-Raphson equation
-                # edge case from biology
-                if xi < 0:
-                    xi = 0
-                print("IC = [ts={}, ti={}] ---> Iter #{}/{} - xi={:.3f}, xi_1={}, fi={}, dfds={}".format(ts,
-                                                                                                         ti,
-                                                                                                         opt_index + 1,
-                                                                                                         MAX_ITER,
-                                                                                                         xi,
-                                                                                                         xi_1,
-                                                                                                         fi,
-                                                                                                         dfds))
-                if abs(xi - xi_1) <= 2 * X_DELTA or xi in xi_history:
+        if not dataset_ready:
+            # Optimization process hyper-parameter #
+            MAX_ITER = 10
+            X_DELTA = 1
+
+            # generate the dataset
+            x = []
+            y = []
+            for i in range(10):
+                ts = random.randint(0, 100)
+                ti = random.randint(0, 100)
+                # find best 's' in range
+                xi_1 = round(ti / 2)
+                # Iterating until either the tolerance or max iterations is met
+                xi_history = []
+                for opt_index in range(MAX_ITER):
+                    fi = Main.desire_metric(df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1]))[0]
+                    dfds = (Main.desire_metric(
+                        df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 + X_DELTA]))[
+                                0] -
+                            Main.desire_metric(
+                                df=Main.solve_the_model_wrapper(initial_condition=[ts, ti, xi_1 - X_DELTA]))[
+                                0]) / 2 * X_DELTA
+                    xi = round(xi_1 - fi / dfds)  # Newton-Raphson equation
+                    # edge case from biology
+                    if xi < 0:
+                        xi = 0
+                    print("IC = [ts={}, ti={}] ---> Iter #{}/{} - xi={:.3f}, xi_1={}, fi={}, dfds={}".format(ts,
+                                                                                                             ti,
+                                                                                                             opt_index + 1,
+                                                                                                             MAX_ITER,
+                                                                                                             xi,
+                                                                                                             xi_1,
+                                                                                                             fi,
+                                                                                                             dfds))
+                    if abs(xi - xi_1) <= 2 * X_DELTA or xi in xi_history:
+                        xi_1 = xi
+                        break
+                    xi_history.append(xi)
                     xi_1 = xi
-                    break
-                xi_history.append(xi)
-                xi_1 = xi
-            x.append([ts, ti])
-            y.append(round(xi_1))
+                x.append([ts, ti])
+                y.append(round(xi_1))
 
-        # organize the results
-        x = pd.DataFrame(data=x,
-                         columns=["T_s", "T_i"])
-        y = pd.DataFrame(data=y,
-                         columns=["S"])
+            # organize the results
+            x = pd.DataFrame(data=x,
+                             columns=["T_s", "T_i"])
+            y = pd.DataFrame(data=y,
+                             columns=["S"])
 
-        # save data for later usage
-        over_all_df = x.copy()
-        over_all_df["S"] = y
-        over_all_df.to_csv(os.path.join(os.path.dirname(__file__),
-                                        Main.RESULTS_FOLDER,
-                                        "model_train_data.csv"),
-                           index=False)
+            # save data for later usage
+            over_all_df = x.copy()
+            over_all_df["S"] = y
+            over_all_df.to_csv(os.path.join(os.path.dirname(__file__),
+                                            Main.RESULTS_FOLDER,
+                                            "model_train_data.csv"),
+                               index=False)
+        else:
+            over_all_df = pd.read_csv(os.path.join(os.path.dirname(__file__),
+                                                   Main.RESULTS_FOLDER,
+                                                   "model_train_data.csv"))
 
         Plotter.snail_scatter(df=over_all_df,
                               save_path=os.path.join(os.path.dirname(__file__),
@@ -260,7 +281,11 @@ class Main:
                                                      "optimal.pdf"))
 
         # split to train and test
-        x_train, y_train, x_test, y_test = train_test_split(x,
+        over_all_df["S"] = over_all_df.apply(lambda row: to_classes(row=row), axis=1)
+        x = over_all_df[["T_s", "T_i"]]
+        y = over_all_df["S"]
+
+        x_train, x_test, y_train, y_test = train_test_split(x,
                                                             y,
                                                             test_size=0.2,
                                                             random_state=Main.RANDOM_STATE)
@@ -276,21 +301,31 @@ class Main:
         clf = model_picker.best_estimator_
 
         # test model
+        print("Best params: {}".format(model_picker.best_params_))
         print(
-            "Main.fourth_graph, model train's mae: {:.3f}%".format(mean_absolute_error(clf.predict(x_train), y_train)))
-        print("Main.fourth_graph, model test's mae: {:.3f}%".format(mean_absolute_error(clf.predict(x_test), y_test)))
+            "Main.fourth_graph, model train's acc: {:.3f}%".format(100*accuracy_score(clf.predict(x_train), y_train)))
+        print("Main.fourth_graph, model test's acc: {:.3f}%".format(100*accuracy_score(clf.predict(x_test), y_test)))
+
+        model_picker = GridSearchCV(estimator=DecisionTreeClassifier(splitter="best"),
+                                    param_grid={
+                                        "criterion": ["gini", "entropy"],
+                                        "max_depth": [4, 5, 6, 7, 8, 9],
+                                        "random_state": [Main.RANDOM_STATE]
+                                    })
+        model_picker.fit(x, y)
+        clf = model_picker.best_estimator_
+
+        # save model to file for later if needed
+        with open(os.path.join(os.path.dirname(__file__), Main.RESULTS_FOLDER, "model"), "wb") as model_file:
+            pickle.dump(clf,
+                        model_file)
 
         # plot tree
         Plotter.dt(clf=clf,
                    x=x,
                    y=y,
                    feature_names=list(x),
-                   save_path=os.path.join(Main.RESULTS_FOLDER, "fig_4.pdf"))
-
-        # save model to file for later if needed
-        with open(os.path.join(os.path.dirname(__file__), Main.RESULTS_FOLDER, "model"), "wb") as model_file:
-            pickle.dump(clf,
-                        model_file)
+                   save_path=os.path.join(Main.RESULTS_FOLDER, "fig_4.svg"))
 
     @staticmethod
     def solve_the_model_wrapper(params: dict = None,

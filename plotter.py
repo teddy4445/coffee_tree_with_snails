@@ -117,9 +117,14 @@ class Plotter:
     @staticmethod
     def snail_scatter(df,
                       save_path: str):
+        c = df.iloc[:,2]
+        max_c = max(c)
+        min_c = min(c)
+        delta_c = max_c - min_c
+        c = [(val-min_c)/delta_c for val in c]
         plt.scatter(df.iloc[:,0],
                     df.iloc[:,1],
-                    c=df.iloc[:,2],
+                    c=c,
                     marker="o",
                     cmap="coolwarm")
         plt.xlabel("$T_s$")
@@ -141,12 +146,7 @@ class Plotter:
            feature_names: list,
            save_path: str):
         viz = dtreeviz(clf,
-                       x,
-                       y,
-                       target_name="Class",
-                       feature_names=feature_names,
-                       scale=2)
-        plt.tight_layout()
-        plt.savefig(save_path,
-                    dpi=600)
-        plt.close()
+                       x_data=x,
+                       y_data=y,
+                       target_name="S")
+        viz.save(save_path)
