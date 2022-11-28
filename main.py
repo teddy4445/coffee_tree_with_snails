@@ -88,10 +88,10 @@ class Main:
     def first_plot() -> None:
         # baseline graph - just run the model and plot it
         initial_conditions = [
-            [100, 5, 100],
-            [0, 100, 5],
-            [97, 3, 50],
-            [25, 25, 25]
+            [1000, 500, 0],
+            [1000, 500, 1000],
+            [1000, 500, 50],
+            [1000, 500, 650]
         ]
         for index, initial_condition in enumerate(initial_conditions):
             print("Main.first_plot: baseline for initial condition: {} (#{}/{}-{:.2f}%)".format(initial_condition,
@@ -337,27 +337,27 @@ class Main:
         params = {} if params is None else params
         return Main.solve_the_model(tspan=tspan,
                                     initial_condition=initial_condition,
-                                    a=0.025 if "a" not in params else params["a"],
-                                    beta=0.085 if "beta" not in params else params["beta"],
-                                    k=0.05 if "k" not in params else params["k"],
-                                    gamma=0.05 if "gamma" not in params else params["gamma"],
-                                    d=0.005 if "d" not in params else params["d"],
-                                    b=0.10 if "b" not in params else params["b"])
+                                    a=0.0000283 if "a" not in params else params["a"],
+                                    beta=0.0298 if "beta" not in params else params["beta"],
+                                    k=0.07333 if "k" not in params else params["k"],
+                                    gamma=0.005 if "gamma" not in params else params["gamma"],
+                                    d=0.0025 if "d" not in params else params["d"],
+                                    b=0.00125 if "b" not in params else params["b"])
 
     @staticmethod
     def solve_the_model(tspan: list = None,
                         initial_condition: list = None,
-                        a: float = 0.01,
-                        beta: float = 0.085,
-                        k: float = 0.05,
-                        gamma: float = 0.05,
-                        b: float = 0.005,
-                        d: float = 0.10):
+                        a: float = 0.0000283,
+                        beta: float = 0.0298,
+                        k: float = 0.07333,
+                        gamma: float = 0.005,
+                        b: float = 0.0025,
+                        d: float = 0.00125):
         # fix default params
         if tspan is None:
-            tspan = [0, 20]
+            tspan = [0, 24*30]
         if initial_condition is None:
-            initial_condition = [100 - 3, 3, 10]
+            initial_condition = [1000, 500, 650]
 
         # make sure the inputs are legit
         if not isinstance(tspan, list) or len(tspan) != 2 or tspan[1] <= tspan[0]:

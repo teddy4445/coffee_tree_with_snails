@@ -45,7 +45,7 @@ class Plotter:
                  "-.",
                  color="blue",
                  label="$S(t)$")
-        plt.xlabel("Time", fontsize=14)
+        plt.xlabel("Time [in hours]", fontsize=14)
         plt.ylabel("Population size", fontsize=14)
         plt.xlim((min(model_matrix["t"]), max(model_matrix["t"])))
         plt.ylim((0, np.max(np.asarray(model_matrix["y"]))))
