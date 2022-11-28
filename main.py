@@ -22,7 +22,7 @@ def to_classes(row):
     try:
         if row["T_i"] + row["T_i"] == 0:
             return 0
-        answer = int(round(row["S"] / (row["T_i"] + row["T_i"]), 1)*10)
+        answer = int(round(row["S"] / (row["T_i"] + row["T_i"]), 1) * 10)
         if answer > 2:
             return 2
         else:
@@ -44,6 +44,7 @@ class Main:
     OCTAVE_RUN_RESULT_NAME = "model_answer.mat"
 
     RANDOM_STATE = 73  # Sheldon's number
+    RANDOM_SAMPLES = 10
 
     # END - CONSTS #
 
@@ -59,7 +60,7 @@ class Main:
         # make sure the IO is file
         Main.io()
         # baseline graphs
-        #Main.first_plot()
+        # Main.first_plot()
         # one-dim sensitivity graphs
         Main.second_graph()
         # heatmap sensitivity graphs
@@ -81,7 +82,8 @@ class Main:
         An approximation to the basic reproduction number
         """
         m = np.asarray(df["y"])
-        score = [(m[index, 1] - m[index - 1, 1]) / m[index - 1, 1] for index in range(1, len(m[:, 1]))]
+        score = [abs((m[index, 1] - m[index - 1, 1] + m[index, 0] - m[index - 1, 0]) / m[index - 1, 1]) for index in
+                 range(1, len(m[:, 1]))]
         return np.mean(score), np.std(score)
 
     @staticmethod
@@ -107,7 +109,7 @@ class Main:
         """
         Generate all the parameter sensitivity graphs
         """
-        Main.sens(parameter_range=[i * (0.0000283/(24*24))/4.5 for i in range(9)], parameter_name="a")
+        Main.sens(parameter_range=[i * (0.0000283 / (24 * 24)) / 4.5 for i in range(9)], parameter_name="a")
 
         Main.sens(parameter_range=[i * 0.025 for i in range(5)], parameter_name="beta")
 
@@ -133,9 +135,13 @@ class Main:
                                                                               index + 1,
                                                                               len(parameter_range),
                                                                               (index + 1) * 100 / len(parameter_range)))
-            mean, std = Main.desire_metric(df=Main.solve_the_model_wrapper(params={parameter_name: parm_val}))
-            ans_mean.append(mean)
-            ans_std.append(std)
+            values = [Main.desire_metric(df=Main.solve_the_model_wrapper(params={parameter_name: parm_val},
+                                                                         initial_condition=[random.randint(10, 100),
+                                                                                            random.randint(1, 100),
+                                                                                            random.randint(1, 100)]))[0]
+                      for _ in range(Main.RANDOM_SAMPLES)]
+            ans_mean.append(np.mean(values))
+            ans_std.append(np.std(values))
         Plotter.sensitivity(x=parameter_range,
                             y=ans_mean,
                             y_err=ans_std,
@@ -192,11 +198,15 @@ class Main:
                                                                                              x) + j_index + 1) / (
                                                                                                  len(x) * len(
                                                                                              y))))
-                mean, std = Main.desire_metric(df=Main.solve_the_model_wrapper(params={
-                    x_parameter_name: x_parm_val,
-                    y_parameter_name: y_parm_val
-                }))
-                row.append(mean)
+                values = [Main.desire_metric(df=Main.solve_the_model_wrapper(params={x_parameter_name: x_parm_val,
+                                                                                     y_parameter_name: y_parm_val},
+                                                                             initial_condition=[random.randint(10, 100),
+                                                                                                random.randint(1, 100),
+                                                                                                random.randint(1,
+                                                                                                               100)]))[
+                              0]
+                          for _ in range(Main.RANDOM_SAMPLES)]
+                row.append(np.mean(values))
             answer.append(row)
         df = pd.DataFrame(data=answer,
                           columns=[round(val, 2) for val in x],
@@ -303,8 +313,8 @@ class Main:
         # test model
         print("Best params: {}".format(model_picker.best_params_))
         print(
-            "Main.fourth_graph, model train's acc: {:.3f}%".format(100*accuracy_score(clf.predict(x_train), y_train)))
-        print("Main.fourth_graph, model test's acc: {:.3f}%".format(100*accuracy_score(clf.predict(x_test), y_test)))
+            "Main.fourth_graph, model train's acc: {:.3f}%".format(100 * accuracy_score(clf.predict(x_train), y_train)))
+        print("Main.fourth_graph, model test's acc: {:.3f}%".format(100 * accuracy_score(clf.predict(x_test), y_test)))
 
         model_picker = GridSearchCV(estimator=DecisionTreeClassifier(splitter="best"),
                                     param_grid={
@@ -337,25 +347,25 @@ class Main:
         params = {} if params is None else params
         return Main.solve_the_model(tspan=tspan,
                                     initial_condition=initial_condition,
-                                    a=0.0000283/(24*24) if "a" not in params else params["a"],
-                                    beta=0.0298/(24*24) if "beta" not in params else params["beta"],
-                                    k=0.07333/(24*24) if "k" not in params else params["k"],
-                                    gamma=0.005/(24*24) if "gamma" not in params else params["gamma"],
+                                    a=0.0000283 / (24 * 24) if "a" not in params else params["a"],
+                                    beta=0.0298 / (24 * 24) if "beta" not in params else params["beta"],
+                                    k=0.07333 / (24 * 24) if "k" not in params else params["k"],
+                                    gamma=0.005 / (24 * 24) if "gamma" not in params else params["gamma"],
                                     d=0.0025 if "d" not in params else params["d"],
-                                    b=0.00125/(24*24) if "b" not in params else params["b"])
+                                    b=0.00125 / (24 * 24) if "b" not in params else params["b"])
 
     @staticmethod
     def solve_the_model(tspan: list = None,
                         initial_condition: list = None,
-                        a: float = 0.0000283/(24*24),
-                        beta: float = 0.0298/(24*24),
-                        k: float = 0.07333/(24*24),
-                        gamma: float = 0.005/(24*24),
-                        b: float = 0.0025/(24*24),
+                        a: float = 0.0000283 / (24 * 24),
+                        beta: float = 0.0298 / (24 * 24),
+                        k: float = 0.07333 / (24 * 24),
+                        gamma: float = 0.005 / (24 * 24),
+                        b: float = 0.0025 / (24 * 24),
                         d: float = 0.00125):
         # fix default params
         if tspan is None:
-            tspan = [0, 24*30]
+            tspan = [0, 24 * 30]
         if initial_condition is None:
             initial_condition = [1000, 500, 650]
 
