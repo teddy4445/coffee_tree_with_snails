@@ -59,7 +59,7 @@ class Main:
         # make sure the IO is file
         Main.io()
         # baseline graphs
-        Main.first_plot()
+        #Main.first_plot()
         # one-dim sensitivity graphs
         Main.second_graph()
         # heatmap sensitivity graphs
@@ -89,8 +89,8 @@ class Main:
         # baseline graph - just run the model and plot it
         initial_conditions = [
             [1000, 500, 0],
-            [1000, 500, 1000],
-            [1000, 500, 50],
+            [1000, 500, 1500],
+            [1000, 500, 200],
             [1000, 500, 650]
         ]
         for index, initial_condition in enumerate(initial_conditions):
@@ -107,7 +107,7 @@ class Main:
         """
         Generate all the parameter sensitivity graphs
         """
-        Main.sens(parameter_range=[i * 0.025 for i in range(5)], parameter_name="a")
+        Main.sens(parameter_range=[i * (0.0000283/(24*24))/4.5 for i in range(9)], parameter_name="a")
 
         Main.sens(parameter_range=[i * 0.025 for i in range(5)], parameter_name="beta")
 
@@ -337,21 +337,21 @@ class Main:
         params = {} if params is None else params
         return Main.solve_the_model(tspan=tspan,
                                     initial_condition=initial_condition,
-                                    a=0.0000283 if "a" not in params else params["a"],
-                                    beta=0.0298 if "beta" not in params else params["beta"],
-                                    k=0.07333 if "k" not in params else params["k"],
-                                    gamma=0.005 if "gamma" not in params else params["gamma"],
+                                    a=0.0000283/(24*24) if "a" not in params else params["a"],
+                                    beta=0.0298/(24*24) if "beta" not in params else params["beta"],
+                                    k=0.07333/(24*24) if "k" not in params else params["k"],
+                                    gamma=0.005/(24*24) if "gamma" not in params else params["gamma"],
                                     d=0.0025 if "d" not in params else params["d"],
-                                    b=0.00125 if "b" not in params else params["b"])
+                                    b=0.00125/(24*24) if "b" not in params else params["b"])
 
     @staticmethod
     def solve_the_model(tspan: list = None,
                         initial_condition: list = None,
-                        a: float = 0.0000283,
-                        beta: float = 0.0298,
-                        k: float = 0.07333,
-                        gamma: float = 0.005,
-                        b: float = 0.0025,
+                        a: float = 0.0000283/(24*24),
+                        beta: float = 0.0298/(24*24),
+                        k: float = 0.07333/(24*24),
+                        gamma: float = 0.005/(24*24),
+                        b: float = 0.0025/(24*24),
                         d: float = 0.00125):
         # fix default params
         if tspan is None:
