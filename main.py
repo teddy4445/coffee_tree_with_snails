@@ -44,7 +44,7 @@ class Main:
     OCTAVE_RUN_RESULT_NAME = "model_answer.mat"
 
     RANDOM_STATE = 73  # Sheldon's number
-    RANDOM_SAMPLES = 10
+    RANDOM_SAMPLES = 100
 
     # END - CONSTS #
 
